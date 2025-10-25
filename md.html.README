@@ -1,0 +1,34 @@
+# MDView - Single File Version
+
+This is a completely self-contained markdown viewer that requires **only one file** - `md.html`.
+
+## Features
+
+✅ **Single File** - No external dependencies  
+✅ **Drag & Drop** - Drop markdown files directly  
+✅ **File Picker** - Click to browse and select files  
+✅ **GitHub Flavored Markdown** - Full markdown support  
+✅ **Responsive Design** - Works on all devices  
+✅ **No Installation** - Just open in any browser  
+
+## Usage
+
+1. **Download** `md.html` to your computer
+2. **Open** `md.html` in any web browser (double-click or drag to browser)
+3. **Use** - Drag markdown files onto the page or click "Choose File"
+
+## Browser Compatibility
+
+Works in all modern browsers:
+- Chrome ✅
+- Firefox ✅  
+- Safari ✅
+- Edge ✅
+
+## File Size
+
+343KB (includes all CSS and JavaScript)
+
+---
+
+*Built with React, Create React App, and GitHub Flavored Markdown*

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <base href="./" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="A web-only markdown and PDF viewer with drag & drop functionality and PDF to markdown conversion"
+    />
+    <title>MDView - Markdown & PDF Viewer</title>
+    <script>
+      // Fix for file:// protocol - create a mock document.baseURI if needed
+      if (!document.baseURI || document.baseURI === 'about:blank') {
+        Object.defineProperty(document, 'baseURI', {
+          value: window.location.href,
+          writable: true
+        });
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root" data-reactroot=""></div>
+    <script>
+      // Polyfill for file:// protocol React 18 compatibility
+      if (window.location.protocol === 'file:') {
+        // Create a comment node to satisfy React's container check
+        const root = document.getElementById('root');
+        if (root && !root.hasChildNodes()) {
+          root.appendChild(document.createComment('react-mount-point'));
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "mdview",
+  "version": "1.0.0",
+  "description": "A web-only markdown and PDF viewer with drag & drop functionality and PDF to markdown conversion",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "PORT=9876 react-scripts start",
+    "build": "react-scripts build",
+    "build:single": "npm run build && ./create_single_file.sh",
+    "serve": "serve -s build -l 9876",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^3.11.174",
+    "react": "^18.2.0",
+    "react-dom": "18.2.0",
+    "react-markdown": "^9.0.1",
+    "react-scripts": "5.0.1",
+    "remark-gfm": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "serve": "^14.2.5"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
