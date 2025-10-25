@@ -1,6 +1,7 @@
 # MDView - Web Markdown & PDF Viewer
 
-A web-only markdown and PDF viewer that allows users to drag & drop or select markdown files to view their content in the browser. **PDF files are automatically converted to markdown for viewing and download.**
+A web-only markdown and PDF viewer that allows users to drag & drop or select markdown files to view their content in the browser. 
+**PDF files are automatically converted to markdown for viewing and download.**
 
 ## Features
 
@@ -14,8 +15,13 @@ A web-only markdown and PDF viewer that allows users to drag & drop or select ma
 - **Responsive Design**: Works on desktop and mobile devices
 - **Clean Interface**: Modern, minimal design with syntax highlighting
 
-## Getting Started
+## Usage
+Clone the repo and open md.html directly in your browser.
 
+## Building
+If you want to build it locally, see below.
+
+## Getting Started
 ### Prerequisites
 
 - Node.js (version 14 or higher)
