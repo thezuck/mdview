@@ -148,7 +148,7 @@ npm install -g serve
 serve -s build
 ```
 
-Then open `http://localhost:5000`
+Then open `http://localhost:9876`
 
 ## License
 
