@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import html2pdf from 'html2pdf.js';
 import { convertPdfToMarkdown } from './pdfToMarkdown';
 import './App.css';
 
@@ -14,6 +15,8 @@ function App() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [editorContent, setEditorContent] = useState('');
   const fileInputRef = useRef(null);
+  const viewerContentRef = useRef(null);
+  const editorPreviewRef = useRef(null);
 
   const readFile = useCallback(async (file) => {
     const fileName = file.name.toLowerCase();
@@ -149,6 +152,38 @@ function App() {
     URL.revokeObjectURL(url);
   }, [editorContent, fileName]);
 
+  const handleDownloadPdf = useCallback(() => {
+    if (!viewerContentRef.current) return;
+
+    const pdfFileName = fileName.replace(/\.md$/, '.pdf') || 'document.pdf';
+    
+    const opt = {
+      margin: 0.5,
+      filename: pdfFileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(viewerContentRef.current).save();
+  }, [fileName]);
+
+  const handleDownloadPdfFromEditor = useCallback(() => {
+    if (!editorPreviewRef.current) return;
+
+    const pdfFileName = fileName.replace(/\.md$/, '.pdf') || 'new-document.pdf';
+    
+    const opt = {
+      margin: 0.5,
+      filename: pdfFileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(editorPreviewRef.current).save();
+  }, [fileName]);
+
   return (
     <div className="app">
       <header className="header">
@@ -164,6 +199,9 @@ function App() {
               <div className="editor-header-buttons">
                 <button className="download-button" onClick={handleDownloadNew}>
                   Download MD
+                </button>
+                <button className="download-pdf-button" onClick={handleDownloadPdfFromEditor}>
+                  Download PDF
                 </button>
                 <button className="save-button" onClick={handleSaveNew}>
                   Save & Preview
@@ -186,7 +224,7 @@ function App() {
               </div>
               <div className="preview-pane">
                 <h3>Preview</h3>
-                <div className="markdown-content">
+                <div className="markdown-content" ref={editorPreviewRef}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {editorContent}
                   </ReactMarkdown>
@@ -251,12 +289,15 @@ function App() {
                 <button className="download-button" onClick={handleDownload}>
                   Download MD
                 </button>
+                <button className="download-pdf-button" onClick={handleDownloadPdf}>
+                  Download PDF
+                </button>
                 <button className="clear-button" onClick={handleClear}>
                   Clear
                 </button>
               </div>
             </div>
-            <div className="markdown-content">
+            <div className="markdown-content" ref={viewerContentRef}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {markdown}
               </ReactMarkdown>
