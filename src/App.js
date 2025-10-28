@@ -11,6 +11,8 @@ function App() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPdf, setIsPdf] = useState(false);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [editorContent, setEditorContent] = useState('');
   const fileInputRef = useRef(null);
 
   const readFile = useCallback(async (file) => {
@@ -110,6 +112,43 @@ function App() {
     URL.revokeObjectURL(url);
   }, [markdown, fileName]);
 
+  const handleCreateNew = useCallback(() => {
+    setIsCreatingNew(true);
+    setEditorContent('# New Markdown Document\n\nStart typing your markdown here...');
+    setMarkdown('');
+    setFileName('new-document.md');
+    setError('');
+  }, []);
+
+  const handleEditorChange = useCallback((e) => {
+    setEditorContent(e.target.value);
+  }, []);
+
+  const handleSaveNew = useCallback(() => {
+    setMarkdown(editorContent);
+    setIsCreatingNew(false);
+  }, [editorContent]);
+
+  const handleCancelNew = useCallback(() => {
+    setIsCreatingNew(false);
+    setEditorContent('');
+    setFileName('');
+  }, []);
+
+  const handleDownloadNew = useCallback(() => {
+    if (!editorContent) return;
+
+    const blob = new Blob([editorContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || 'new-document.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [editorContent, fileName]);
+
   return (
     <div className="app">
       <header className="header">
@@ -118,7 +157,44 @@ function App() {
       </header>
 
       <main className="main">
-        {!markdown ? (
+        {isCreatingNew ? (
+          <div className="editor-container">
+            <div className="editor-header">
+              <h2>Create New Markdown</h2>
+              <div className="editor-header-buttons">
+                <button className="download-button" onClick={handleDownloadNew}>
+                  Download MD
+                </button>
+                <button className="save-button" onClick={handleSaveNew}>
+                  Save & Preview
+                </button>
+                <button className="clear-button" onClick={handleCancelNew}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+            <div className="editor-content">
+              <div className="editor-pane">
+                <h3>Editor</h3>
+                <textarea
+                  className="markdown-editor"
+                  value={editorContent}
+                  onChange={handleEditorChange}
+                  placeholder="Type your markdown here..."
+                  spellCheck="false"
+                />
+              </div>
+              <div className="preview-pane">
+                <h3>Preview</h3>
+                <div className="markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {editorContent}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : !markdown ? (
           <div
             className={`upload-area ${isDragOver ? 'drag-over' : ''}`}
             onDragOver={handleDragOver}
@@ -140,12 +216,20 @@ function App() {
                 }
               </p>
               {!isLoading && (
-                <button
-                  className="upload-button"
-                  onClick={handleButtonClick}
-                >
-                  Choose File
-                </button>
+                <div className="upload-buttons">
+                  <button
+                    className="upload-button"
+                    onClick={handleButtonClick}
+                  >
+                    Choose File
+                  </button>
+                  <button
+                    className="create-new-button"
+                    onClick={handleCreateNew}
+                  >
+                    Create New
+                  </button>
+                </div>
               )}
             </div>
             <input
