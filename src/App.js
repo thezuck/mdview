@@ -3,9 +3,13 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import html2pdf from 'html2pdf.js';
 import { convertPdfToMarkdown } from './pdfToMarkdown';
+import LogAnalysis from './LogAnalysis';
+import LogView from './LogView';
+import JsonView from './JsonView';
 import './App.css';
 
 function App() {
+  const [activeTab, setActiveTab] = useState('markdown');
   const [markdown, setMarkdown] = useState('');
   const [fileName, setFileName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -186,14 +190,46 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>MDView</h1>
-        <p>Markdown & PDF Viewer with Conversion</p>
-      </header>
+      <div className="tabs">
+        <button 
+          className={`tab ${activeTab === 'markdown' ? 'active' : ''}`}
+          onClick={() => setActiveTab('markdown')}
+        >
+          Markdown Viewer
+        </button>
+        <button 
+          className={`tab ${activeTab === 'jsonview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('jsonview')}
+        >
+          JSON View
+        </button>
+        <button 
+          className={`tab ${activeTab === 'logview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('logview')}
+        >
+          Log View
+        </button>
+        <button 
+          className={`tab ${activeTab === 'logs' ? 'active' : ''}`}
+          onClick={() => setActiveTab('logs')}
+        >
+          Log Analysis
+        </button>
+      </div>
 
       <main className="main">
-        {isCreatingNew ? (
-          <div className="editor-container">
+        {activeTab === 'jsonview' ? (
+          <div className="json-view-container">
+            <JsonView />
+          </div>
+        ) : activeTab === 'logview' ? (
+          <div className="log-view-container">
+            <LogView />
+          </div>
+        ) : activeTab === 'markdown' ? (
+          <>
+            {isCreatingNew ? (
+              <div className="editor-container">
             <div className="editor-header">
               <h2>Create New Markdown</h2>
               <div className="editor-header-buttons">
@@ -303,11 +339,17 @@ function App() {
               </ReactMarkdown>
             </div>
           </div>
-        )}
+            )}
 
-        {error && (
-          <div className="error-message">
-            {error}
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="log-analysis-container">
+            <LogAnalysis />
           </div>
         )}
       </main>
