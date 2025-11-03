@@ -24,6 +24,8 @@ function LogAnalysis() {
   const abortControllerRef = useRef(null);
   const shouldStopRef = useRef(false); // Additional flag to ensure streaming stops
   const [analysisProgress, setAnalysisProgress] = useState(''); // Track current stage of analysis
+  const [leftPanelWidth, setLeftPanelWidth] = useState(50); // Percentage width of left panel
+  const [isResizing, setIsResizing] = useState(false);
   
   const AVAILABLE_MODELS = {
     'Phi-3.5-mini-instruct-q4f16_1-MLC': { 
@@ -619,6 +621,46 @@ ${windowedLog}`
     }
   }, [uploadModelBackup]);
 
+  const workspaceRef = useRef(null);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing || !workspaceRef.current) return;
+    
+    const containerRect = workspaceRef.current.getBoundingClientRect();
+    const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+    
+    // Constrain between 20% and 80%
+    if (newLeftWidth >= 20 && newLeftWidth <= 80) {
+      setLeftPanelWidth(newLeftWidth);
+    }
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      // Prevent text selection while dragging
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
   const clearModelCache = useCallback(async () => {
     const modelInfo = AVAILABLE_MODELS[selectedModel];
     if (!window.confirm(`Are you sure you want to clear the model cache? This will require re-downloading the model (${modelInfo.size}) on next use.`)) {
@@ -904,8 +946,8 @@ ${windowedLog}`
         </div>
       )}
 
-      <div className="analysis-workspace">
-        <div className="log-input-section">
+      <div className="analysis-workspace" ref={workspaceRef}>
+        <div className="log-input-section" style={{ width: `${leftPanelWidth}%` }}>
           <h3>
             Log Input 
             {logText.length > 0 && ` (${logText.length} chars, max ${MAX_WINDOW_SIZE} chars ≈ ${currentAllocation.inputTokens.toLocaleString()} tokens)`}
@@ -1001,7 +1043,13 @@ ${windowedLog}`
           </div>
         </div>
 
-        <div className="log-output-section">
+        <div 
+          className="resize-divider" 
+          onMouseDown={handleMouseDown}
+          style={{ cursor: 'col-resize' }}
+        />
+
+        <div className="log-output-section" style={{ width: `${100 - leftPanelWidth}%` }}>
           <h3>Analysis Results {isAnalyzing && analysis && <span className="streaming-indicator">● Generating...</span>}</h3>
           {isAnalyzing && !analysis ? (
             <div className="analysis-in-progress">
