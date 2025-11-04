@@ -2272,6 +2272,32 @@ body {
   border-radius: 12px 12px 0 0;
 }
 
+.json-overlay-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.json-overlay-back {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.json-overlay-back:hover {
+  background: #5568d3;
+  transform: translateX(-2px);
+}
+
 .json-overlay-header h3 {
   margin: 0;
   color: #333;

@@ -5,11 +5,14 @@ function LogView() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // Percentage width of left panel
   const [isResizing, setIsResizing] = useState(false);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
-  const [jsonOverlayContent, setJsonOverlayContent] = useState(null);
-  const [jsonOverlayTitle, setJsonOverlayTitle] = useState('');
+  const [jsonOverlayStack, setJsonOverlayStack] = useState([]); // Stack for navigation history
   const workspaceRef = useRef(null);
 
   const MAX_STRING_LENGTH = 100; // Maximum length before truncating strings in JSON
+  
+  // Get current overlay content from stack
+  const jsonOverlayContent = jsonOverlayStack.length > 0 ? jsonOverlayStack[jsonOverlayStack.length - 1].content : null;
+  const jsonOverlayTitle = jsonOverlayStack.length > 0 ? jsonOverlayStack[jsonOverlayStack.length - 1].title : '';
 
   // Parse ANSI color codes to CSS classes
   const parseAnsiColors = useCallback((text) => {
@@ -68,16 +71,24 @@ function LogView() {
     return typeof str === 'string' && str.length > MAX_STRING_LENGTH;
   }, []);
 
-  // Open JSON overlay with full content
+  // Open JSON overlay with full content - pushes to navigation stack
   const openJsonOverlay = useCallback((content, title = 'Full Content') => {
-    setJsonOverlayContent(content);
-    setJsonOverlayTitle(title);
+    setJsonOverlayStack(prev => [...prev, { content, title }]);
   }, []);
 
-  // Close JSON overlay
+  // Go back in the overlay stack
+  const goBackInOverlay = useCallback(() => {
+    setJsonOverlayStack(prev => {
+      if (prev.length > 1) {
+        return prev.slice(0, -1); // Remove last item
+      }
+      return []; // Close overlay if at root
+    });
+  }, []);
+
+  // Close JSON overlay completely
   const closeJsonOverlay = useCallback(() => {
-    setJsonOverlayContent(null);
-    setJsonOverlayTitle('');
+    setJsonOverlayStack([]);
   }, []);
 
   // Parse a single log entry
@@ -374,11 +385,11 @@ function LogView() {
     }
   }, [isOverlayOpen, handleCloseOverlay]);
 
-  // Handle ESC key to close JSON overlay
+  // Handle ESC key to go back in JSON overlay stack
   useEffect(() => {
     const handleEscKey = (e) => {
       if (e.key === 'Escape' && jsonOverlayContent) {
-        closeJsonOverlay();
+        goBackInOverlay();
       }
     };
 
@@ -388,7 +399,7 @@ function LogView() {
         document.removeEventListener('keydown', handleEscKey);
       };
     }
-  }, [jsonOverlayContent, closeJsonOverlay]);
+  }, [jsonOverlayContent, goBackInOverlay]);
 
   const sampleLog = `[29/10/2025 21:34 GMT+2] Failed to build resource 019a3031-d9e0-75ba-964c-a2c96a6a40f9: {"service":"runner-backend","command":"npm run build","code":1,"stdout":"\\n> app@0.0.0 build\\n> NODE_ENV=production npm run generate-imports && npx vite build\\n\\n\\n> app@0.0.0 generate-imports\\n> node scripts/generate-dynamic-imports.js\\n\\n🔍 Scanning for numbered directories...\\nFound numbered directories: [ 0 ]\\n  ✓ Found App file for page 0: App.tsx\\n📝 Updating component files...\\nUpdated DynamicMainApp.jsx (simplified version)\\nUpdated MainApp.jsx\\nUpdated vite.config.js\\n♻️  Using shared components from src/components (not copying)...\\n🖼️  Copying images from numbered directories...\\n✅ Copied images from src/0/images to public/images/0/\\n🖼️  Fixing image paths in components...\\n🔧 Image path mode: PRODUCTION (using ./images/ prefix)\\n🔧 Fixing component import paths...\\n  ✓ Component import already correct in components/MessagingWidget.tsx: \\"../../../components\\"\\n🔧 Fixing router components in App files to prevent nested router errors...\\n🚫 Fixing nested lazy loading to prevent path resolution issues...\\n🔧 Re-fixing component import paths after lazy loading fixes...\\n  ✓ Component import already correct in components/MessagingWidget.tsx: \\"../../../components\\"\\n🚀 Aggressively fixing ALL import paths to prevent build failures...\\n🔧 Aggressively fixed 0 import paths across all files\\n🎨 Fixing CSS files for Tailwind compatibility...\\n🔍 Validating import paths...\\n✅ All 8 import paths validated successfully\\n✅ Successfully updated MainApp.jsx, DynamicMainApp.jsx, vite.config.js, configured shared components, fixed router issues, fixed nested lazy loading, and fixed CSS\\n📊 Generated imports for directories: 0\\n♻️  All generated code now references shared components from src/components\\n\\u001b[36mvite v6.4.1 \\u001b[32mbuilding for production...\\u001b[36m\\u001b[39m\\ntransforming...\\n\\u001b[32m✓\\u001b[39m 5 modules transformed.\\n","stderr":"\\u001b[31m✗\\u001b[39m Build failed in 323ms\\n\\u001b[31merror during build:\\n\\u001b[31m[vite:load-fallback] Could not load /Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css (imported by src/main.jsx): ENOENT: no such file or directory, open '/Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css'\\u001b[31m\\n    at async open (node:internal/fs/promises:640:25)\\n    at async Object.readFile (node:internal/fs/promises:1277:14)\\n    at async Object.handler (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:45872:27)\\n    at async PluginDriver.hookFirstAndGetPlugin (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22308:28)\\n    at async file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:21308:33\\n    at async Queue.work (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22536:32)\\u001b[39m\\n","error":"\\u001b[31m✗\\u001b[39m Build failed in 323ms\\n\\u001b[31merror during build:\\n\\u001b[31m[vite:load-fallback] Could not load /Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css (imported by src/main.jsx): ENOENT: no such file or directory, open '/Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css'\\u001b[31m\\n    at async open (node:internal/fs/promises:640:25)\\n    at async Object.readFile (node:internal/fs/promises:1277:14)\\n    at async Object.handler (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:45872:27)\\n    at async PluginDriver.hookFirstAndGetPlugin (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22308:28)\\n    at async file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:21308:33\\n    at async Queue.work (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22536:32)\\u001b[39m\\n"}
 
@@ -533,11 +544,22 @@ function LogView() {
 
       {/* JSON overlay for viewing full content */}
       {jsonOverlayContent && (
-        <div className="json-overlay" onClick={closeJsonOverlay}>
-          <div className="json-overlay-content" onClick={(e) => e.stopPropagation()}>
+        <div className="json-overlay">
+          <div className="json-overlay-content">
             <div className="json-overlay-header">
-              <h3>{jsonOverlayTitle}</h3>
-              <button className="json-overlay-close" onClick={closeJsonOverlay}>✕</button>
+              <div className="json-overlay-header-left">
+                {jsonOverlayStack.length > 1 && (
+                  <button 
+                    className="json-overlay-back"
+                    onClick={goBackInOverlay}
+                    title="Go back (ESC)"
+                  >
+                    ← Back
+                  </button>
+                )}
+                <h3>{jsonOverlayTitle}</h3>
+              </div>
+              <button className="json-overlay-close" onClick={closeJsonOverlay} title="Close overlay">✕</button>
             </div>
             <div className="json-overlay-body">
               {renderOverlayContent(jsonOverlayContent)}
@@ -546,6 +568,7 @@ function LogView() {
               <div className="json-overlay-stats">
                 Length: {jsonOverlayContent.length} characters | 
                 Lines: {jsonOverlayContent.split('\n').length}
+                {jsonOverlayStack.length > 1 && ` | Level: ${jsonOverlayStack.length}`}
               </div>
               <button 
                 className="json-overlay-copy"
