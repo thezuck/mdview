@@ -5,7 +5,11 @@ function LogView() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // Percentage width of left panel
   const [isResizing, setIsResizing] = useState(false);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [jsonOverlayContent, setJsonOverlayContent] = useState(null);
+  const [jsonOverlayTitle, setJsonOverlayTitle] = useState('');
   const workspaceRef = useRef(null);
+
+  const MAX_STRING_LENGTH = 100; // Maximum length before truncating strings in JSON
 
   // Parse ANSI color codes to CSS classes
   const parseAnsiColors = useCallback((text) => {
@@ -59,6 +63,23 @@ function LogView() {
     return parts;
   }, []);
 
+  // Check if string should be truncated
+  const shouldTruncate = useCallback((str) => {
+    return typeof str === 'string' && str.length > MAX_STRING_LENGTH;
+  }, []);
+
+  // Open JSON overlay with full content
+  const openJsonOverlay = useCallback((content, title = 'Full Content') => {
+    setJsonOverlayContent(content);
+    setJsonOverlayTitle(title);
+  }, []);
+
+  // Close JSON overlay
+  const closeJsonOverlay = useCallback(() => {
+    setJsonOverlayContent(null);
+    setJsonOverlayTitle('');
+  }, []);
+
   // Parse a single log entry
   const parseLogEntry = useCallback((logText) => {
     const entries = [];
@@ -79,27 +100,46 @@ function LogView() {
         let jsonData = null;
         let restOfMessage = message;
         
-        // Find JSON in the message
-        const jsonMatch = message.match(/:\s*(\{.*)/);
-        if (jsonMatch) {
-          try {
-            // Try to parse the JSON (might span multiple lines)
-            let jsonStr = jsonMatch[1];
-            let braceCount = (jsonStr.match(/\{/g) || []).length - (jsonStr.match(/\}/g) || []).length;
-            let j = i + 1;
-            
-            // Collect more lines if JSON is incomplete
-            while (braceCount > 0 && j < lines.length) {
-              jsonStr += '\n' + lines[j];
-              braceCount += (lines[j].match(/\{/g) || []).length - (lines[j].match(/\}/g) || []).length;
-              j++;
+        // Find JSON in the message - look for the last occurrence of '{' which starts valid JSON
+        // This handles cases where the message has multiple colons before the JSON
+        let jsonStartIndex = -1;
+        
+        // Try to find JSON by looking for '{' characters from right to left
+        for (let k = message.length - 1; k >= 0; k--) {
+          if (message[k] === '{') {
+            try {
+              // Try to parse from this position
+              let jsonStr = message.substring(k);
+              let braceCount = (jsonStr.match(/\{/g) || []).length - (jsonStr.match(/\}/g) || []).length;
+              let j = i + 1;
+              
+              // Collect more lines if JSON is incomplete
+              while (braceCount > 0 && j < lines.length) {
+                jsonStr += '\n' + lines[j];
+                braceCount += (lines[j].match(/\{/g) || []).length - (lines[j].match(/\}/g) || []).length;
+                j++;
+              }
+              
+              // Try to parse it
+              const parsed = JSON.parse(jsonStr);
+              // If successful, this is our JSON
+              jsonData = parsed;
+              jsonStartIndex = k;
+              i = j - 1; // Skip the lines we consumed
+              break; // Found valid JSON, stop looking
+            } catch (e) {
+              // Not valid JSON from this position, continue searching
+              continue;
             }
-            
-            jsonData = JSON.parse(jsonStr);
-            restOfMessage = message.substring(0, jsonMatch.index + 1).trim();
-            i = j - 1; // Skip the lines we consumed
-          } catch (e) {
-            // Not valid JSON, treat as regular message
+          }
+        }
+        
+        // Extract the message part (everything before the JSON)
+        if (jsonData && jsonStartIndex > 0) {
+          restOfMessage = message.substring(0, jsonStartIndex).trim();
+          // Remove trailing colon or space if present
+          if (restOfMessage.endsWith(':')) {
+            restOfMessage = restOfMessage.substring(0, restOfMessage.length - 1).trim();
           }
         }
         
@@ -146,13 +186,31 @@ function LogView() {
     return 'info';
   }, []);
 
-  // Render JSON with syntax highlighting
-  const renderJson = useCallback((json, depth = 0) => {
+  // Render JSON with syntax highlighting and truncation
+  const renderJson = useCallback((json, depth = 0, path = 'root') => {
     if (json === null || json === undefined) {
       return <span className="json-null">null</span>;
     }
     
     if (typeof json === 'string') {
+      // Check if string should be truncated
+      if (shouldTruncate(json)) {
+        const truncated = json.substring(0, MAX_STRING_LENGTH) + '...';
+        
+        return (
+          <span className="json-string-container">
+            <span className="json-string">"{truncated}"</span>
+            <button 
+              className="json-expand-button"
+              onClick={() => openJsonOverlay(json, `String at ${path}`)}
+              title="Click to view full content"
+            >
+              📄 View Full
+            </button>
+          </span>
+        );
+      }
+      
       // Check if string contains ANSI codes or newlines (like stdout/stderr)
       if (json.includes('\u001b[') || json.includes('\n')) {
         const parts = parseAnsiColors(json);
@@ -182,7 +240,7 @@ function LogView() {
           <span className="json-bracket">[</span>
           {json.map((item, idx) => (
             <div key={idx} className="json-array-item" style={{ marginLeft: `${(depth + 1) * 20}px` }}>
-              {renderJson(item, depth + 1)}
+              {renderJson(item, depth + 1, `${path}[${idx}]`)}
               {idx < json.length - 1 && <span className="json-comma">,</span>}
             </div>
           ))}
@@ -204,7 +262,7 @@ function LogView() {
             <div key={key} className="json-object-item" style={{ marginLeft: `${(depth + 1) * 20}px` }}>
               <span className="json-key">"{key}"</span>
               <span className="json-colon">: </span>
-              {renderJson(json[key], depth + 1)}
+              {renderJson(json[key], depth + 1, `${path}.${key}`)}
               {idx < keys.length - 1 && <span className="json-comma">,</span>}
             </div>
           ))}
@@ -216,7 +274,35 @@ function LogView() {
     }
     
     return String(json);
-  }, [parseAnsiColors]);
+  }, [parseAnsiColors, shouldTruncate, openJsonOverlay]);
+
+  // Render overlay content - try to parse as JSON, otherwise show as text
+  const renderOverlayContent = useCallback((content) => {
+    // Try to parse as JSON
+    try {
+      const parsed = JSON.parse(content);
+      // If successful, render using the same JSON renderer
+      return (
+        <div className="json-display">
+          {renderJson(parsed, 0, 'overlay')}
+        </div>
+      );
+    } catch (e) {
+      // Not valid JSON, check if it contains ANSI codes or just show as text
+      if (content.includes('\u001b[')) {
+        const parts = parseAnsiColors(content);
+        return (
+          <pre className="json-overlay-text">
+            {parts.map((part, idx) => (
+              <span key={idx} className={part.class}>{part.text}</span>
+            ))}
+          </pre>
+        );
+      }
+      // Plain text
+      return <pre className="json-overlay-text">{content}</pre>;
+    }
+  }, [renderJson, parseAnsiColors]);
 
   const handleClear = useCallback(() => {
     setRawLog('');
@@ -287,6 +373,22 @@ function LogView() {
       };
     }
   }, [isOverlayOpen, handleCloseOverlay]);
+
+  // Handle ESC key to close JSON overlay
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape' && jsonOverlayContent) {
+        closeJsonOverlay();
+      }
+    };
+
+    if (jsonOverlayContent) {
+      document.addEventListener('keydown', handleEscKey);
+      return () => {
+        document.removeEventListener('keydown', handleEscKey);
+      };
+    }
+  }, [jsonOverlayContent, closeJsonOverlay]);
 
   const sampleLog = `[29/10/2025 21:34 GMT+2] Failed to build resource 019a3031-d9e0-75ba-964c-a2c96a6a40f9: {"service":"runner-backend","command":"npm run build","code":1,"stdout":"\\n> app@0.0.0 build\\n> NODE_ENV=production npm run generate-imports && npx vite build\\n\\n\\n> app@0.0.0 generate-imports\\n> node scripts/generate-dynamic-imports.js\\n\\n🔍 Scanning for numbered directories...\\nFound numbered directories: [ 0 ]\\n  ✓ Found App file for page 0: App.tsx\\n📝 Updating component files...\\nUpdated DynamicMainApp.jsx (simplified version)\\nUpdated MainApp.jsx\\nUpdated vite.config.js\\n♻️  Using shared components from src/components (not copying)...\\n🖼️  Copying images from numbered directories...\\n✅ Copied images from src/0/images to public/images/0/\\n🖼️  Fixing image paths in components...\\n🔧 Image path mode: PRODUCTION (using ./images/ prefix)\\n🔧 Fixing component import paths...\\n  ✓ Component import already correct in components/MessagingWidget.tsx: \\"../../../components\\"\\n🔧 Fixing router components in App files to prevent nested router errors...\\n🚫 Fixing nested lazy loading to prevent path resolution issues...\\n🔧 Re-fixing component import paths after lazy loading fixes...\\n  ✓ Component import already correct in components/MessagingWidget.tsx: \\"../../../components\\"\\n🚀 Aggressively fixing ALL import paths to prevent build failures...\\n🔧 Aggressively fixed 0 import paths across all files\\n🎨 Fixing CSS files for Tailwind compatibility...\\n🔍 Validating import paths...\\n✅ All 8 import paths validated successfully\\n✅ Successfully updated MainApp.jsx, DynamicMainApp.jsx, vite.config.js, configured shared components, fixed router issues, fixed nested lazy loading, and fixed CSS\\n📊 Generated imports for directories: 0\\n♻️  All generated code now references shared components from src/components\\n\\u001b[36mvite v6.4.1 \\u001b[32mbuilding for production...\\u001b[36m\\u001b[39m\\ntransforming...\\n\\u001b[32m✓\\u001b[39m 5 modules transformed.\\n","stderr":"\\u001b[31m✗\\u001b[39m Build failed in 323ms\\n\\u001b[31merror during build:\\n\\u001b[31m[vite:load-fallback] Could not load /Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css (imported by src/main.jsx): ENOENT: no such file or directory, open '/Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css'\\u001b[31m\\n    at async open (node:internal/fs/promises:640:25)\\n    at async Object.readFile (node:internal/fs/promises:1277:14)\\n    at async Object.handler (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:45872:27)\\n    at async PluginDriver.hookFirstAndGetPlugin (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22308:28)\\n    at async file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:21308:33\\n    at async Queue.work (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22536:32)\\u001b[39m\\n","error":"\\u001b[31m✗\\u001b[39m Build failed in 323ms\\n\\u001b[31merror during build:\\n\\u001b[31m[vite:load-fallback] Could not load /Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css (imported by src/main.jsx): ENOENT: no such file or directory, open '/Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/src/0/src/styles.css'\\u001b[31m\\n    at async open (node:internal/fs/promises:640:25)\\n    at async Object.readFile (node:internal/fs/promises:1277:14)\\n    at async Object.handler (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:45872:27)\\n    at async PluginDriver.hookFirstAndGetPlugin (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22308:28)\\n    at async file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:21308:33\\n    at async Queue.work (file:///Users/amirzucker/workspace/liveprd_workspace/900bf3c9-cd76-467f-9704-f9a5dc3b90f4/019a3031-d9e0-75ba-964c-a2c96a6a40f9/node_modules/rollup/dist/es/shared/node-entry.js:22536:32)\\u001b[39m\\n"}
 
@@ -424,6 +526,35 @@ function LogView() {
               <div className="log-entries">
                 {renderLogEntries()}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JSON overlay for viewing full content */}
+      {jsonOverlayContent && (
+        <div className="json-overlay" onClick={closeJsonOverlay}>
+          <div className="json-overlay-content" onClick={(e) => e.stopPropagation()}>
+            <div className="json-overlay-header">
+              <h3>{jsonOverlayTitle}</h3>
+              <button className="json-overlay-close" onClick={closeJsonOverlay}>✕</button>
+            </div>
+            <div className="json-overlay-body">
+              {renderOverlayContent(jsonOverlayContent)}
+            </div>
+            <div className="json-overlay-footer">
+              <div className="json-overlay-stats">
+                Length: {jsonOverlayContent.length} characters | 
+                Lines: {jsonOverlayContent.split('\n').length}
+              </div>
+              <button 
+                className="json-overlay-copy"
+                onClick={() => {
+                  navigator.clipboard.writeText(jsonOverlayContent);
+                }}
+              >
+                📋 Copy to Clipboard
+              </button>
             </div>
           </div>
         </div>
