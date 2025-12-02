@@ -77,7 +77,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem 1rem;
+  padding: 0.5rem;
 }
 
 .upload-area {
@@ -150,11 +150,11 @@ body {
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  max-width: 1200px;
-  width: 100%;
+  max-width: 99%;
+  width: 99%;
   display: flex;
   flex-direction: column;
-  height: 80vh;
+  height: 99vh;
 }
 
 .viewer-header {
@@ -327,10 +327,113 @@ body {
   line-height: 1.5;
 }
 
+/* Row resize handle */
+.row-resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  background: transparent;
+  z-index: 5;
+  transition: background 0.2s ease;
+}
+
+.row-resize-handle:hover {
+  background: rgba(102, 126, 234, 0.3);
+}
+
+.row-resize-handle.dragging {
+  background: rgba(102, 126, 234, 0.6);
+}
+
+/* Apply height popup */
+.apply-height-popup {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  transition: bottom 0.3s ease;
+}
+
+.apply-height-popup.show {
+  bottom: 20px;
+}
+
+.apply-height-content {
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.apply-height-content span {
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.apply-height-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.apply-height-yes,
+.apply-height-no {
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-height-yes {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.apply-height-yes:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ab394 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.apply-height-no {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.apply-height-no:hover {
+  background: #dee2e6;
+  transform: translateY(-1px);
+}
+
 .markdown-content table {
   border-collapse: collapse;
   width: 100%;
   margin: 1em 0;
+  table-layout: auto;
 }
 
 .markdown-content th,
@@ -338,12 +441,199 @@ body {
   border: 1px solid #ddd;
   padding: 8px 12px;
   text-align: left;
+  position: relative;
+  vertical-align: top;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.markdown-content td {
+  line-height: 1.6;
+}
+
+/* Force break long URLs and words that don't have natural break points */
+.markdown-content td a,
+.markdown-content th a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+/* Ensure HTML elements in table cells are styled properly */
+.markdown-content td br {
+  display: block;
+  content: "";
+  margin: 0.25em 0;
+}
+
+.markdown-content td strong,
+.markdown-content td b {
+  font-weight: 600;
+  color: #333;
+  word-break: break-word;
+}
+
+.markdown-content td em,
+.markdown-content td i {
+  font-style: italic;
+  word-break: break-word;
+}
+
+.markdown-content td code {
+  background: #f4f4f4;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .markdown-content th {
   background-color: #f8f9fa;
   font-weight: 600;
   color: #333;
+  user-select: none;
+  padding: 4px 8px;
+}
+
+/* Table header wrapper for controls */
+.th-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.th-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.th-controls {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.th-btn {
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.th-btn:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: scale(1.1);
+}
+
+.th-btn:active {
+  transform: scale(0.95);
+}
+
+.th-hide-btn {
+  background: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.th-hide-btn:hover {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.th-sort-btn {
+  background: rgba(40, 167, 69, 0.1);
+  border-color: rgba(40, 167, 69, 0.3);
+}
+
+.th-sort-btn:hover {
+  background: rgba(40, 167, 69, 0.2);
+  border-color: rgba(40, 167, 69, 0.5);
+}
+
+/* Hidden column state */
+.column-hidden {
+  display: none !important;
+}
+
+/* Column restore indicator */
+.column-restore-indicator {
+  position: absolute;
+  top: -8px;
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  line-height: 1;
+  font-weight: bold;
+}
+
+.column-restore-indicator:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+}
+
+.column-restore-indicator.position-left {
+  left: 0;
+}
+
+.column-restore-indicator.position-right {
+  right: 0;
+}
+
+.markdown-content colgroup col {
+  width: auto;
+}
+
+/* Resizable table columns */
+.markdown-content .column-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+  transition: background 0.2s ease;
+}
+
+.markdown-content .column-resizer:hover {
+  background: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 0 4px rgba(102, 126, 234, 0.3);
+}
+
+.markdown-content .column-resizer:active {
+  background: rgba(102, 126, 234, 0.7);
+}
+
+.markdown-content table.enhanced-initialized th {
+  position: relative;
+  cursor: default;
+}
+
+.markdown-content table.enhanced-initialized th:hover {
+  background-color: #f0f2ff;
 }
 
 .markdown-content a {

@@ -5,6 +5,7 @@ function JsonView() {
   const [error, setError] = useState('');
   const [overlayContent, setOverlayContent] = useState(null);
   const [overlayTitle, setOverlayTitle] = useState('');
+  const [autoFormatted, setAutoFormatted] = useState(false);
 
   const MAX_STRING_LENGTH = 50;
 
@@ -13,14 +14,53 @@ function JsonView() {
     if (!jsonText.trim()) return null;
     
     try {
-      const parsed = JSON.parse(jsonText);
+      // First, try to parse as-is
+      let parsed;
+      let wasUnescaped = false;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (firstError) {
+        // If that fails, try to unescape the string first
+        // This handles cases where the JSON itself is escaped (e.g., from API responses)
+        const unescaped = jsonText
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
+        parsed = JSON.parse(unescaped);
+        wasUnescaped = true;
+      }
+      
       setError('');
-      return parsed;
+      return { data: parsed, wasUnescaped };
     } catch (e) {
       setError(`Invalid JSON: ${e.message}`);
       return null;
     }
   }, [jsonText]);
+
+  // Auto-format JSON after successful parsing
+  useEffect(() => {
+    if (parsedJson && !autoFormatted) {
+      try {
+        const formatted = JSON.stringify(parsedJson.data, null, 2);
+        // Only update if the formatted version is different
+        if (formatted !== jsonText) {
+          setJsonText(formatted);
+          setAutoFormatted(true);
+        }
+      } catch (e) {
+        // If formatting fails, just continue with the current text
+      }
+    }
+  }, [parsedJson, autoFormatted, jsonText]);
+
+  // Reset auto-format flag when user manually changes the text
+  const handleJsonTextChange = useCallback((newText) => {
+    setJsonText(newText);
+    setAutoFormatted(false);
+  }, []);
 
   // Check if string should be truncated
   const shouldTruncate = useCallback((str) => {
@@ -60,19 +100,21 @@ function JsonView() {
 
   // Render JSON with syntax highlighting and truncation
   const renderJson = useCallback((json, depth = 0, path = 'root') => {
-    if (json === null || json === undefined) {
+    // Extract the actual data if it's wrapped
+    const actualJson = json?.data !== undefined ? json.data : json;
+    if (actualJson === null || actualJson === undefined) {
       return <span className="json-null">null</span>;
     }
     
-    if (typeof json === 'string') {
-      if (shouldTruncate(json)) {
-        const truncated = json.substring(0, MAX_STRING_LENGTH) + '...';
+    if (typeof actualJson === 'string') {
+      if (shouldTruncate(actualJson)) {
+        const truncated = actualJson.substring(0, MAX_STRING_LENGTH) + '...';
         return (
           <span className="json-string-container">
             <span className="json-string">"{truncated}"</span>
             <button 
               className="json-expand-button"
-              onClick={() => openOverlay(json, `String at ${path}`)}
+              onClick={() => openOverlay(actualJson, `String at ${path}`)}
               title="Click to view full content"
             >
               📄 View Full
@@ -80,26 +122,26 @@ function JsonView() {
           </span>
         );
       }
-      return <span className="json-string">"{json}"</span>;
+      return <span className="json-string">"{actualJson}"</span>;
     }
     
-    if (typeof json === 'number') {
-      return <span className="json-number">{json}</span>;
+    if (typeof actualJson === 'number') {
+      return <span className="json-number">{actualJson}</span>;
     }
     
-    if (typeof json === 'boolean') {
-      return <span className="json-boolean">{json.toString()}</span>;
+    if (typeof actualJson === 'boolean') {
+      return <span className="json-boolean">{actualJson.toString()}</span>;
     }
     
-    if (Array.isArray(json)) {
-      if (json.length === 0) return <span className="json-bracket">[]</span>;
+    if (Array.isArray(actualJson)) {
+      if (actualJson.length === 0) return <span className="json-bracket">[]</span>;
       return (
         <div className="json-array">
           <span className="json-bracket">[</span>
-          {json.map((item, idx) => (
+          {actualJson.map((item, idx) => (
             <div key={idx} className="json-array-item" style={{ marginLeft: `${(depth + 1) * 20}px` }}>
               {renderJson(item, depth + 1, `${path}[${idx}]`)}
-              {idx < json.length - 1 && <span className="json-comma">,</span>}
+              {idx < actualJson.length - 1 && <span className="json-comma">,</span>}
             </div>
           ))}
           <div style={{ marginLeft: `${depth * 20}px` }}>
@@ -109,8 +151,8 @@ function JsonView() {
       );
     }
     
-    if (typeof json === 'object') {
-      const keys = Object.keys(json);
+    if (typeof actualJson === 'object') {
+      const keys = Object.keys(actualJson);
       if (keys.length === 0) return <span className="json-bracket">{'{}'}</span>;
       
       return (
@@ -120,7 +162,7 @@ function JsonView() {
             <div key={key} className="json-object-item" style={{ marginLeft: `${(depth + 1) * 20}px` }}>
               <span className="json-key">"{key}"</span>
               <span className="json-colon">: </span>
-              {renderJson(json[key], depth + 1, `${path}.${key}`)}
+              {renderJson(actualJson[key], depth + 1, `${path}.${key}`)}
               {idx < keys.length - 1 && <span className="json-comma">,</span>}
             </div>
           ))}
@@ -131,19 +173,21 @@ function JsonView() {
       );
     }
     
-    return String(json);
+    return String(actualJson);
   }, [shouldTruncate, openOverlay]);
 
   const handleClear = useCallback(() => {
     setJsonText('');
     setError('');
+    setAutoFormatted(false);
   }, []);
 
   const handleFormat = useCallback(() => {
     if (parsedJson) {
       try {
-        const formatted = JSON.stringify(parsedJson, null, 2);
+        const formatted = JSON.stringify(parsedJson.data, null, 2);
         setJsonText(formatted);
+        setAutoFormatted(true);
       } catch (e) {
         setError('Failed to format JSON');
       }
@@ -153,8 +197,9 @@ function JsonView() {
   const handleMinify = useCallback(() => {
     if (parsedJson) {
       try {
-        const minified = JSON.stringify(parsedJson);
+        const minified = JSON.stringify(parsedJson.data);
         setJsonText(minified);
+        setAutoFormatted(true);
       } catch (e) {
         setError('Failed to minify JSON');
       }
@@ -233,7 +278,7 @@ function JsonView() {
           <textarea
             className="json-input-textarea"
             value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
+            onChange={(e) => handleJsonTextChange(e.target.value)}
             placeholder="Paste your JSON here...&#10;&#10;Example:&#10;{&#10;  &quot;name&quot;: &quot;value&quot;,&#10;  &quot;array&quot;: [1, 2, 3]&#10;}"
             spellCheck="false"
           />

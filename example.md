@@ -20,12 +20,17 @@ function helloWorld() {
 
 ## Table Support
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Drag & Drop | ✅ | Fully implemented |
-| File Picker | ✅ | Alternative upload method |
-| Markdown Rendering | ✅ | GitHub Flavored Markdown |
-| Responsive Design | ✅ | Mobile friendly |
+| Feature | Status | Description | Priority | Notes |
+|---------|--------|-------------|----------|-------|
+| Drag & Drop | ✅ | Fully implemented | High | Works with all file types |
+| File Picker | ✅ | Alternative upload method | Medium | Browser native dialog |
+| Markdown Rendering | ✅ | GitHub Flavored Markdown | High | Supports tables, code blocks |
+| Responsive Design | ✅ | Mobile friendly | Medium | Adapts to screen size |
+| PDF Export | ✅ | Export to PDF | Low | Uses html2pdf library |
+| Syntax Highlighting | ✅ | Code block highlighting | High | Multiple languages supported |
+
+### Resizable Columns
+You can now resize table columns by dragging the right edge of column headers! Try it out with the table above.
 
 ## Lists
 
