@@ -1,18 +1,30 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import html2pdf from 'html2pdf.js';
+import { getHtml2PdfCanvasOptions } from './html2pdfCanvasOptions';
 import { convertPdfToMarkdown } from './pdfToMarkdown';
 import LogAnalysis from './LogAnalysis';
 import LogView from './LogView';
 import JsonView from './JsonView';
+import LaTeXView from './LaTeXView';
 import './App.css';
+
+// Allow data: URLs (e.g. base64 embedded images) in addition to default safe protocols
+const urlTransform = (url, key, node) => {
+  if (typeof url === 'string' && url.trim().toLowerCase().startsWith('data:')) {
+    return url;
+  }
+  return defaultUrlTransform(url);
+};
 
 // Function to clean up HTML entities in table cells
 const preprocessMarkdown = (markdownText) => {
+  // Show literal \n (backslash-n) as line breaks
+  let text = (markdownText || '').replace(/\\n/g, '\n');
   // Process table rows
-  const lines = markdownText.split('\n');
+  const lines = text.split('\n');
   const processedLines = lines.map(line => {
     // Check if this is a table row (contains |)
     if (line.includes('|')) {
@@ -610,8 +622,8 @@ function App() {
       margin: 0.5,
       filename: pdfFileName,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      html2canvas: getHtml2PdfCanvasOptions(),
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
     };
 
     html2pdf().set(opt).from(viewerContentRef.current).save();
@@ -626,8 +638,8 @@ function App() {
       margin: 0.5,
       filename: pdfFileName,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      html2canvas: getHtml2PdfCanvasOptions(),
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
     };
 
     html2pdf().set(opt).from(editorPreviewRef.current).save();
@@ -660,6 +672,12 @@ function App() {
         >
           Log Analysis
         </button>
+        <button 
+          className={`tab ${activeTab === 'latex' ? 'active' : ''}`}
+          onClick={() => setActiveTab('latex')}
+        >
+          LaTeX Viewer
+        </button>
       </div>
 
       <main className="main">
@@ -670,6 +688,10 @@ function App() {
         ) : activeTab === 'logview' ? (
           <div className="log-view-container">
             <LogView />
+          </div>
+        ) : activeTab === 'latex' ? (
+          <div className="latex-view-container">
+            <LaTeXView />
           </div>
         ) : activeTab === 'markdown' ? (
           <>
@@ -709,6 +731,7 @@ function App() {
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeRaw]}
+                    urlTransform={urlTransform}
                   >
                     {preprocessMarkdown(editorContent)}
                   </ReactMarkdown>
@@ -785,6 +808,7 @@ function App() {
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]} 
                 rehypePlugins={[rehypeRaw]}
+                urlTransform={urlTransform}
               >
                 {preprocessMarkdown(markdown)}
               </ReactMarkdown>
