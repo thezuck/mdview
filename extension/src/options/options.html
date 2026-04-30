@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MDView — Options</title>
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>MDView Settings</h1>
+        <p class="subtitle">Markdown viewer for Chrome.</p>
+      </header>
+
+      <section>
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="auto">Auto (follow system)</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </section>
+
+      <section>
+        <label for="tocMode">Table of contents</label>
+        <select id="tocMode">
+          <option value="auto">Auto (hide if fewer than 3 headings)</option>
+          <option value="show">Always show</option>
+          <option value="hide">Always hide</option>
+        </select>
+      </section>
+
+      <section>
+        <label for="defaultView">Default view</label>
+        <select id="defaultView">
+          <option value="rendered">Rendered</option>
+          <option value="source">Source (raw text)</option>
+        </select>
+      </section>
+
+      <section>
+        <label class="checkbox-row">
+          <input id="renderMermaid" type="checkbox" />
+          Render Mermaid diagrams (lazy-loaded; ~700KB on demand)
+        </label>
+      </section>
+
+      <section>
+        <label for="maxBytes">Max file size to render automatically</label>
+        <select id="maxBytes"></select>
+        <p class="help">Larger files will show a banner offering "Render anyway".</p>
+      </section>
+
+      <footer>
+        <span id="status" aria-live="polite"></span>
+      </footer>
+    </main>
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>

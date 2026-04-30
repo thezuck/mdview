@@ -1,0 +1,23 @@
+{
+  "name": "mdview-extension",
+  "version": "0.1.0",
+  "description": "Chrome extension that auto-renders markdown files when opened in Chrome",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "vite build",
+    "zip": "node scripts/zip.mjs"
+  },
+  "dependencies": {
+    "dompurify": "^3.1.6",
+    "github-markdown-css": "^5.6.1",
+    "highlight.js": "^11.10.0",
+    "marked": "^14.1.2",
+    "mermaid": "^11.2.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.27",
+    "vite": "^5.4.8"
+  }
+}
